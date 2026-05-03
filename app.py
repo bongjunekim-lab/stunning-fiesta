@@ -13,7 +13,7 @@ def get_gauge_info(value, min_val, max_val, reverse=False):
     color = "#008000" if score >= 0.8 else "#FFD700" if score >= 0.4 else "#FF0000"
     return color, percent
 
-# 2. 분석 출력 공통 함수 (자동 설계 모드와 수동 입력 모드 통합)
+# 2. 분석 출력 공통 함수
 def render_analysis_block(title, t_f, t_m, t_b, p_f, p_m, p_b, is_special=False, expanded=False):
     total_t = t_f + t_m + t_b
     area_cm2, density, filling_rate = 900, 2.0, 0.6
@@ -46,11 +46,14 @@ def render_analysis_block(title, t_f, t_m, t_b, p_f, p_m, p_b, is_special=False,
             st.write(f"앞면 ({p_f}μm): {t_f:.3f} mm → {w_f:.1f} g")
             st.write(f"중간 ({p_m}μm): {t_m:.3f} mm → {w_m:.1f} g")
             st.write(f"뒷면 ({p_b}μm): {t_b:.3f} mm → {w_b:.1f} g")
+            # 이미지 요청 사항: 두께 합계 추가
+            st.markdown(f"<div style='border-top:1px solid #ccc; margin-top:5px; padding-top:5px; font-weight:bold; color:#d32f2f;'>📏 두께 합계: {total_t:.3f} mm</div>", unsafe_allow_html=True)
+            
         with col2:
             st.write("**[종합 판정]**")
-            if discharge_min <= 65: st.success("✅ 최적 설계 (고속)")
+            if bottleneck_safety >= 1.5: st.success("✅ 최적 설계 (고안정)")
             else: st.info("🟡 보통 수준")
-            st.progress(max(0, min(1.0, 60/discharge_min)) if discharge_min > 0 else 0)
+            st.progress(max(0, min(1.0, bottleneck_safety/3.0)))
 
         st.markdown("---")
         st.markdown("<h5 style='font-size: 14px; color: #666;'>[공학 성능 지표 분석]</h5>", unsafe_allow_html=True)
@@ -90,8 +93,8 @@ if 'analyze_idea' not in st.session_state: st.session_state.analyze_idea = False
 # 사이드바 설정
 st.sidebar.title("🛠 분석 및 구상 도구")
 
-# 1. 타경쟁사 제품 분석 (기존 기능 그대로 유지)
-show_comp = st.sidebar.checkbox("🔍 타경쟁사 제품 분석 열기")
+# 1. 타경쟁사 제품 분석 (문구 수정: '열기' 삭제)
+show_comp = st.sidebar.checkbox("🔍 타경쟁사 제품 분석")
 if show_comp:
     with st.sidebar.container():
         comp_name = st.sidebar.text_input("제품명", value="Competitor A")
@@ -105,20 +108,20 @@ if show_comp:
 
 st.sidebar.markdown("---")
 
-# 2. 제품 구상 (중앙 기준 자동 설계 로직 적용)
-show_idea = st.sidebar.checkbox("💡 제품 구상 분석 열기 (자동 최적화)")
+# 2. 제품 구상 (문구 수정: '열기' 삭제 및 자동 최적화 로직 적용)
+show_idea = st.sidebar.checkbox("💡 제품 구상 분석 (자동 최적화)")
 if show_idea:
     with st.sidebar.container():
         idea_name = st.sidebar.text_input("구상 모델명", value="My New Idea")
-        m_p = st.sidebar.number_input("중앙 입자 크기(μm)", value=65)
-        m_t = st.sidebar.number_input("중앙 층 두께(mm)", value=0.40, step=0.01)
+        m_p = st.sidebar.number_input("중앙 입자 크기(μm)", value=75) # 이미지 기준 75
+        m_t = st.sidebar.number_input("중앙 층 두께(mm)", value=0.50, step=0.01) # 이미지 기준 0.5
         
-        # [자동 설계 로직 계산]
+        # [자동 설계 로직] 중앙 두께의 12.5% 전이
         delta = m_t * 0.125
         auto_f_p, auto_b_p = 150, 120
         auto_f_t, auto_b_t = m_t - delta, m_t + delta
         
-        st.sidebar.caption(f"자동 설정: 앞 {auto_f_p}μm({auto_f_t:.2f}mm) / 뒤 {auto_b_p}μm({auto_b_t:.2f}mm)")
+        st.sidebar.caption(f"자동 설정: 앞 {auto_f_p}μm({auto_f_t:.3f}mm) / 뒤 {auto_b_p}μm({auto_b_t:.3f}mm)")
         if st.sidebar.button("구상 분석 실행"): st.session_state.analyze_idea = True
 
 st.write("---")
@@ -132,5 +135,4 @@ if st.session_state.analyze_idea and show_idea:
 
 st.write("---")
 st.write("### 🏆 내 전극 설계 모델 (기준 비교)")
-# 표준 최적 모델 (중앙 65, 두께 0.40 기준 자동 적용)
-render_analysis_block("1. 내 설계 - 표준 최적형", 0.35, 0.40, 0.45, 150, 65, 120, expanded=True)
+render_analysis_block("1. 내 설계 - 표준 최적형", 0.35, 0.40, 0.45, 150, 65, 120, expanded=False)
