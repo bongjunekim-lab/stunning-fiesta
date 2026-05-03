@@ -46,8 +46,10 @@ def calculate_electrode_design(total_thickness_mm):
         discharge_time = 0.5 * (total_res / 100) * (total_thickness_mm**2)
         capacity_unit = mid_ratio * total_thickness_mm * 150
 
-        with st.expander(mode_name, expanded=True):
-            # 상단 구역: 두께 구성 및 종합 판정
+        # 모드 제목 폰트 크기 대폭 확대 (HTML 사용)
+        st.markdown(f"<h2 style='font-size: 28px; color: #1f77b4; margin-bottom: -10px;'>{mode_name}</h2>", unsafe_allow_html=True)
+        
+        with st.expander("세부 분석 보기", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
                 st.write("**[층별 두께 구성]**")
@@ -57,33 +59,39 @@ def calculate_electrode_design(total_thickness_mm):
             with col2:
                 st.write("**[종합 판정]**")
                 if discharge_time <= 1.0:
-                    st.success("✅ 초고속 배출 최적 설계")
+                    msg, s_per = "✅ 초고속 배출 최적 설계", 1.0
+                    st.success(msg)
                 elif discharge_time <= 3.0:
-                    st.info("🟡 보통 수준: 배출 속도 다소 지연")
+                    msg, s_per = "🟡 보통 수준: 배출 속도 다소 지연", 0.6
+                    st.info(msg)
                 else:
-                    st.warning("⚠️ 병목 위험: 설계 조정 권장")
+                    msg, s_per = "⚠️ 병목 위험: 설계 조정 권장", 0.3
+                    st.warning(msg)
+                
+                # 종합 판정 바 (직관적인 설계 완성도 표시)
+                st.markdown(f"<div style='font-size: 14px; font-weight: bold; margin-top: 10px;'>설계 완성도 게이지</div>", unsafe_allow_html=True)
+                st.progress(s_per)
 
             st.markdown("---")
             
-            # 하단 구역: 공학 성능 지표 분석 (요청하신 대로 이동됨)
-            st.markdown("#### [공학 성능 지표 분석]")
+            # 공학 성능 지표 분석 소제목 (상대적으로 작게 설정)
+            st.markdown("<h5 style='font-size: 16px; color: #555;'>[공학 성능 지표 분석]</h5>", unsafe_allow_html=True)
             
             # 1. 순차 배출 안정성 바
             s_color, s_per = get_gauge_info(bottleneck_safety, 0.5, 3.0)
-            st.markdown(f"**순차 배출 안정성: <span style='color:{s_color};'>{bottleneck_safety:.2f}</span>**", unsafe_allow_html=True)
+            st.markdown(f"<span style='font-size: 14px;'>순차 배출 안정성: <b style='color:{s_color};'>{bottleneck_safety:.2f}</b></span>", unsafe_allow_html=True)
             st.progress(s_per)
-            st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
             # 2. 예상 포집량 바
             c_color, c_per = get_gauge_info(capacity_unit, 0, 300)
-            st.markdown(f"**예상 포집량: <span style='color:{c_color};'>{capacity_unit:.1f} mg</span>**", unsafe_allow_html=True)
+            st.markdown(f"<span style='font-size: 14px;'>예상 포집량: <b style='color:{c_color};'>{capacity_unit:.1f} mg</b></span>", unsafe_allow_html=True)
             st.progress(c_per)
-            st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
             # 3. 예상 배출 시간 바
             t_color, t_per = get_gauge_info(discharge_time, 0.1, 5.0, reverse=True)
-            st.markdown(f"**예상 배출 시간: <span style='color:{t_color};'>{discharge_time:.2f} 시간</span>**", unsafe_allow_html=True)
+            st.markdown(f"<span style='font-size: 14px;'>예상 배출 시간: <b style='color:{t_color};'>{discharge_time:.2f} 시간</b></span>", unsafe_allow_html=True)
             st.progress(t_per)
+            st.markdown("<br>", unsafe_allow_html=True)
 
 # --- 메인 레이아웃 ---
 st.set_page_config(page_title="Electrode Design Lab", layout="wide")
@@ -101,5 +109,4 @@ with c2:
     slider_val = st.slider("슬라이더로 두께 조절:", min_value=0.1, max_value=5.0, value=float(input_val), step=0.1)
 
 final_thickness = slider_val if slider_val != input_val else input_val
-
 calculate_electrode_design(final_thickness)
