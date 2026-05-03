@@ -10,7 +10,7 @@ def show_notice_expander():
         - **무게 추정 원칙:** 30x30cm 기준, 소재 밀도 2.0g/cm³, 충진율 60% 반영.
         """)
 
-# 2. 시간을 'n시간 n분' 문자열로 변환하는 헬퍼 함수
+# 2. 시간 변환 헬퍼 (n시간 n분)
 def format_time_kr(total_minutes):
     hours = int(total_minutes // 60)
     minutes = int(total_minutes % 60)
@@ -37,25 +37,21 @@ def render_analysis_block(title, t_f, t_m, t_b, p_f, p_m, p_b, is_special=False,
     density = 2.0
     filling_rate = 0.6
 
-    # 무게 계산
     w_f = area_cm2 * (t_f / 10) * density * filling_rate
     w_m = area_cm2 * (t_m / 10) * density * filling_rate
     w_b = area_cm2 * (t_b / 10) * density * filling_rate
 
-    # 저항 및 지표 계산
     res_f = t_f / (p_f**2) * 1000000 
     res_m = t_m / (p_m**2) * 1000000
     res_b = t_b / (p_b**2) * 1000000
     total_res = res_f + res_m + res_b
     
     bottleneck_safety = (res_b / res_f)
-    
-    # 시간 계산 (분 단위)
     discharge_min = (0.5 * (total_res / 100) * (total_t**2)) * 60
     collection_min = (1.2 * (total_res / 150) * total_t) * 60
     total_cycle_min = discharge_min + collection_min
-    
     capacity_unit = (t_m / total_t) * total_t * 150
+    
     bg_color = "#f8f9fa" if is_special else "transparent"
     
     with st.expander(f"{title}", expanded=expanded):
@@ -77,26 +73,21 @@ def render_analysis_block(title, t_f, t_m, t_b, p_f, p_m, p_b, is_special=False,
         st.markdown("---")
         st.markdown("<h5 style='font-size: 14px; color: #666;'>[공학 성능 지표 분석]</h5>", unsafe_allow_html=True)
         
-        # 1. 안정성
         s_color, s_per = get_gauge_info(bottleneck_safety, 0.5, 3.0)
         st.markdown(f"순차 배출 안정성: <b style='color:{s_color};'>{bottleneck_safety:.2f}</b>", unsafe_allow_html=True)
         st.progress(s_per)
 
-        # 2. 포집 시간 (n시간 n분)
         st.markdown(f"<div style='font-size: 14px; color: #0000FF; font-weight: bold; margin-top: 10px;'>🕒 포집 시간: {format_time_kr(collection_min)} ({collection_min:.1f}분)</div>", unsafe_allow_html=True)
         st.progress(max(0, min(1.0, collection_min/240)))
 
-        # 3. 예상 포집량
         c_color, c_per = get_gauge_info(capacity_unit, 0, 300)
         st.markdown(f"예상 포집량: <b style='color:{c_color};'>{capacity_unit:.1f} mg</b>", unsafe_allow_html=True)
         st.progress(c_per)
 
-        # 4. 배출 시간 (n시간 n분)
         t_color, t_per = get_gauge_info(discharge_min, 6, 300, reverse=True)
         st.markdown(f"예상 배출 시간: <b style='color:{t_color};'>{format_time_kr(discharge_min)} ({discharge_min:.1f}분)</b>", unsafe_allow_html=True)
         st.progress(t_per)
         
-        # 5. 1회 사이클 총합 분석 (추가 요청 사항)
         st.markdown("---")
         st.markdown(f"""
             <div style='background-color: #eef2ff; padding: 10px; border-radius: 5px; border-left: 5px solid #4f46e5;'>
@@ -105,7 +96,6 @@ def render_analysis_block(title, t_f, t_m, t_b, p_f, p_m, p_b, is_special=False,
                 <span style='font-size: 15px;'>총 소요 시간: <b>{format_time_kr(total_cycle_min)}</b> ({total_cycle_min:.1f}분)</span>
             </div>
         """, unsafe_allow_html=True)
-        
         st.markdown("</div>", unsafe_allow_html=True)
 
 # --- 메인 레이아웃 ---
@@ -113,43 +103,47 @@ st.set_page_config(page_title="Electrode Design Lab", layout="wide")
 st.title("⚡ 비대칭 소결 전극 설계 시뮬레이터")
 show_notice_expander()
 
-# 세션 상태 초기화
+# 세션 상태 및 변수 초기화 (NameError 방지 핵심)
 if 'analyze_comp' not in st.session_state: st.session_state.analyze_comp = False
 if 'analyze_idea' not in st.session_state: st.session_state.analyze_idea = False
 
 # 사이드바 설정
 st.sidebar.title("🛠 분석 및 구상 도구")
+
+# 1. 타사 분석 입력창
 show_comp = st.sidebar.checkbox("🔍 타경쟁사 제품 분석 열기")
 if show_comp:
-    with st.sidebar.container():
-        comp_name = st.text_input("제품명", value="Competitor A", key="c_name")
-        cp_f = st.number_input("타사 앞면 입자(μm)", value=150, key="cp_f")
-        cp_m = st.number_input("타사 중간 입자(μm)", value=75, key="cp_m")
-        cp_b = st.number_input("타사 뒷면 입자(μm)", value=150, key="cp_b")
-        ct_f = st.number_input("타사 앞면 두께(mm)", value=0.4, step=0.1, key="ct_f")
-        ct_m = st.number_input("타사 중간 두께(mm)", value=0.4, step=0.1, key="ct_m")
-        ct_b = st.number_input("타사 뒷면 두께(mm)", value=0.4, step=0.1, key="ct_b")
-        if st.sidebar.button("타사 분석 실행"): st.session_state.analyze_comp = True
+    comp_name = st.sidebar.text_input("제품명", value="Competitor A")
+    cp_f = st.sidebar.number_input("타사 앞면 입자(μm)", value=150)
+    cp_m = st.sidebar.number_input("타사 중간 입자(μm)", value=75)
+    cp_b = st.sidebar.number_input("타사 뒷면 입자(μm)", value=150)
+    ct_f = st.sidebar.number_input("타사 앞면 두께(mm)", value=0.4)
+    ct_m = st.sidebar.number_input("타사 중간 두께(mm)", value=0.4)
+    ct_b = st.sidebar.number_input("타사 뒷면 두께(mm)", value=0.4)
+    if st.sidebar.button("타사 분석 실행"): st.session_state.analyze_comp = True
 
 st.sidebar.markdown("---")
+
+# 2. 구상 분석 입력창
 show_idea = st.sidebar.checkbox("💡 제품 구상 분석 열기")
 if show_idea:
-    with st.sidebar.container():
-        idea_name = st.text_input("구상 모델명", value="My New Idea", key="i_name")
-        ip_f = st.number_input("구상 앞면 입자(μm)", value=150, key="ip_f")
-        ip_m = st.number_input("구상 중간 입자(μm)", value=75, key="ip_m")
-        ip_b = st.number_input("구상 뒷면 입자(μm)", value=120, key="ip_b")
-        it_f = st.number_input("구상 앞면 두께(mm)", value=0.4, step=0.1, key="it_f")
-        it_m = st.number_input("구상 중간 두께(mm)", value=0.4, step=0.1, key="it_m")
-        it_b = st.number_input("구상 뒷면 두께(mm)", value=0.4, step=0.1, key="it_b")
-        if st.sidebar.button("구상 분석 실행"): st.session_state.analyze_idea = True
+    idea_name = st.sidebar.text_input("구상 모델명", value="My New Idea")
+    ip_f = st.sidebar.number_input("구상 앞면 입자(μm)", value=150)
+    ip_m = st.sidebar.number_input("구상 중간 입자(μm)", value=75)
+    ip_b = st.sidebar.number_input("구상 뒷면 입자(μm)", value=120)
+    it_f = st.sidebar.number_input("구상 앞면 두께(mm)", value=0.4)
+    it_m = st.sidebar.number_input("구상 중간 두께(mm)", value=0.4)
+    it_b = st.sidebar.number_input("구상 뒷면 두께(mm)", value=0.4)
+    if st.sidebar.button("구상 분석 실행"): st.session_state.analyze_idea = True
 
 st.write("---")
 user_t = st.slider("📏 기본 전극 전체 두께 설정 (mm):", 0.1, 5.0, 1.2, 0.1)
 
-if st.session_state.analyze_comp:
+# 분석 결과 출력 (변수 정의 여부 체크 조건 추가)
+if st.session_state.analyze_comp and show_comp:
     render_analysis_block(f"🚩 타사 분석: {comp_name}", ct_f, ct_m, ct_b, cp_f, cp_m, cp_b, is_special=True, color_theme="#e63946", expanded=True)
-if st.session_state.analyze_idea:
+
+if st.session_state.analyze_idea and show_idea:
     render_analysis_block(f"✨ 제품 구상: {idea_name}", it_f, it_m, it_b, ip_f, ip_m, ip_b, is_special=True, color_theme="#008000", expanded=True)
 
 st.write("---")
