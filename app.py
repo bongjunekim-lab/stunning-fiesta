@@ -45,7 +45,6 @@ def calculate_electrode_design(total_thickness_mm):
         bottleneck_safety = (res_b / res_f)
         discharge_time = 0.5 * (total_res / 100) * (total_thickness_mm**2)
         capacity_unit = mid_ratio * total_thickness_mm * 150
-        # 포집 시간 산출 로직 (예시: 저항과 두께에 비례)
         collection_time = 1.2 * (total_res / 150) * total_thickness_mm
 
         # 모드 제목 폰트 크기 확대
@@ -75,25 +74,23 @@ def calculate_electrode_design(total_thickness_mm):
 
             st.markdown("---")
             
-            # 공학 성능 지표 분석 (폰트 크기 조절)
+            # 공학 성능 지표 분석
             st.markdown("<h5 style='font-size: 16px; color: #555;'>[공학 성능 지표 분석]</h5>", unsafe_allow_html=True)
             
-            # 1. 순차 배출 안정성 & 포집 시간 병기 (요청 사항)
+            # 1. 순차 배출 안정성
             s_color, s_per = get_gauge_info(bottleneck_safety, 0.5, 3.0)
-            st.markdown(f"""
-                <div style='display: flex; justify-content: space-between;'>
-                    <span style='font-size: 14px;'>순차 배출 안정성: <b style='color:{s_color};'>{bottleneck_safety:.2f}</b></span>
-                    <span style='font-size: 14px; color: #0000FF; font-weight: bold;'>/ 포집 시간: {collection_time:.2f} 시간</span>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"<span style='font-size: 14px;'>순차 배출 안정성: <b style='color:{s_color};'>{bottleneck_safety:.2f}</b></span>", unsafe_allow_html=True)
             st.progress(s_per)
 
-            # 2. 예상 포집량 바
+            # 2. 포집 시간 (요청대로 한 칸 아래로 독립 배치)
+            st.markdown(f"<div style='font-size: 14px; color: #0000FF; font-weight: bold; margin-top: 10px;'>🕒 포집 시간: {collection_time:.2f} 시간</div>", unsafe_allow_html=True)
+
+            # 3. 예상 포집량 바
             c_color, c_per = get_gauge_info(capacity_unit, 0, 300)
             st.markdown(f"<span style='font-size: 14px;'>예상 포집량: <b style='color:{c_color};'>{capacity_unit:.1f} mg</b></span>", unsafe_allow_html=True)
             st.progress(c_per)
 
-            # 3. 예상 배출 시간 바
+            # 4. 예상 배출 시간 바
             t_color, t_per = get_gauge_info(discharge_time, 0.1, 5.0, reverse=True)
             st.markdown(f"<span style='font-size: 14px;'>예상 배출 시간: <b style='color:{t_color};'>{discharge_time:.2f} 시간</b></span>", unsafe_allow_html=True)
             st.progress(t_per)
